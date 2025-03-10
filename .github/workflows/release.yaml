@@ -1,0 +1,182 @@
+name: Release
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+      - name: Build
+        run: |
+            go build -o chromium_branding-windows-latest.exe .
+
+      - name: Install Yubico
+        shell: pwsh
+        run: |
+          Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Value 00000000 -Force 
+          curl https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2024-09b-windows-amd64.zip -o yubihsm2.zip
+          Expand-Archive -Path yubihsm2.zip -DestinationPath .\yubihsm2
+          Start-Process -FilePath msiexec -ArgumentList "/i","yubihsm2\yubihsm2-sdk\yubihsm-setup-x64.msi","/qn" -Wait
+          Start-Process -FilePath msiexec -ArgumentList "/i","yubihsm2\yubihsm2-sdk\yubihsm-shell-x64.msi","/qn" -Wait
+          Start-Process -FilePath msiexec -ArgumentList "/i","yubihsm2\yubihsm2-sdk\yubihsm-cngprovider-windows-amd64.msi","/qn" -Wait
+          ls "C:\Program Files\Yubico"
+
+      - name: Sign executable
+        env:
+          CODESIGN_CERT: ${{ secrets.WIN_CODESIGN_CERT }}
+          YBIHSM_CONF: ${{ secrets.YBIHSM_CONF }}
+          YUBIHSM_CONNECTOR_URL: ${{ secrets.YUBIHSM_CONNECTOR_URL }}
+          YUBIHSM_AUTH_KEY_PASS: ${{ secrets.YUBIHSM_AUTH_KEY_PASS }}
+          YUBIHSM_AUTH_KEY_ID: ${{ secrets.YUBIHSM_AUTH_KEY_ID }}
+          WIN_CODESIGN_KEY_CONTAINER: ${{ secrets.WIN_CODESIGN_KEY_CONTAINER }}
+        run: |
+          $Env:YBIHSM_CONF > yubihsm_pkcs11.conf
+
+          $Env:YUBIHSM_PKCS11_CONF="$(pwd)/yubihsm_pkcs11.conf"
+          $Env:PATH+=";C:\Program Files\Yubico\YubiHSM Shell\bin"
+          $Env:PATH+=";C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64"
+
+          Set-ItemProperty -path HKLM:\SOFTWARE\Yubico\YubiHSM -name AuthKeysetID -Type DWord -Value $Env:YUBIHSM_AUTH_KEY_ID
+          Set-ItemProperty -path HKLM:\SOFTWARE\Yubico\YubiHSM -name AuthKeysetPassword -Type String -Value $Env:YUBIHSM_AUTH_KEY_PASS
+          Set-ItemProperty -path HKLM:\SOFTWARE\Yubico\YubiHSM -name ConnectorURL -Type String -Value $Env:YUBIHSM_CONNECTOR_URL
+
+          $Env:CODESIGN_CERT > certificate.crt
+          signtool sign /csp "YubiHSM Key Storage Provider" /kc "$Env:WIN_CODESIGN_KEY_CONTAINER" /f certificate.crt /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 chromium_branding-windows-latest.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-latest-build
+          path: chromium_branding-windows-latest.exe
+          if-no-files-found: ignore
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+      - name: Build
+        run: |
+            go build -o chromium_branding-ubuntu-latest .
+            zip chromium_branding-ubuntu-latest.zip chromium_branding-ubuntu-latest
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-latest-build
+          path: chromium_branding-ubuntu-latest.zip
+          if-no-files-found: ignore
+
+  build-macos:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # macos-13 stands for x86, macos-latest is ARM build.
+        os: [macos-13, macos-latest]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20'
+
+      - name: Build
+        run: |
+            go build -o chromium_branding-${{ matrix.os }} .
+
+      - name: Set up keychain and sign
+        env:
+          BUILD_CERT_BASE64: ${{ secrets.APPLE_DEV_CERT_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import necessary public certificates to keychain
+          curl https://www.apple.com/certificateauthority/AppleRootCA-G3.cer -o AppleRootCA-G3.cer
+          curl https://www.apple.com/certificateauthority/AppleWWDRCAG6.cer -o AppleWWDRCAG6.cer
+          curl https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o DeveloperIDG2CA.cer
+
+          security import ./AppleRootCA-G3.cer -k $KEYCHAIN_PATH
+          security import ./AppleWWDRCAG6.cer -k $KEYCHAIN_PATH
+          security import ./DeveloperIDG2CA.cer -k $KEYCHAIN_PATH
+
+          # import private certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          chmod +x ./chromium_branding-${{ matrix.os }}
+          codesign --force --options runtime --timestamp --verbose --sign "$CODESIGN_IDENTITY" ./chromium_branding-${{ matrix.os }}
+          
+          zip chromium_branding-${{ matrix.os }}.zip chromium_branding-${{ matrix.os }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: chromium_branding-${{ matrix.os }}.zip
+          if-no-files-found: ignore
+
+  release:
+    name: Create GitHub Release Draft
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-linux, build-macos]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # By default, this downloads artifacts from *all* jobs in the workflow
+          # into subfolders named after artifact name.
+          path: dist/
+
+      - name: Rename artifacts
+        run: |
+          mv dist/ubuntu-latest-build/chromium_branding-ubuntu-latest.zip dist/ubuntu-latest-build/chromium_branding_linux_x64.zip
+          mv dist/windows-latest-build/chromium_branding-windows-latest.exe dist/windows-latest-build/chromium_branding_windows_x64.exe
+          mv dist/macos-latest-build/chromium_branding-macos-latest.zip dist/macos-latest-build/chromium_branding_macos_arm64.zip
+          mv dist/macos-13-build/chromium_branding-macos-13.zip dist/macos-13-build/chromium_branding_macos_x64.zip
+
+      - name: Create GitHub Release draft
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        with:
+          files: |
+            dist/windows-latest-build/*
+            dist/ubuntu-latest-build/*
+            dist/macos-latest-build/*
+            dist/macos-13-build/*
+          tag_name: ${{ github.ref_name }}
+          name: "Chromium-Branding ${{ github.ref_name }}"
+          draft: true
+      - name: Check artifacts
+        run: ls -R dist

@@ -1,0 +1,27 @@
+{
+  "version": "1.2.3",
+  "win": {
+    "executableName": "myapp",
+    "processDisplayName": "My App",
+    "legalCopyright": "© 2025 MyCompany",
+    "author": "Me",
+    "productName": "MyApp",
+    "icoPath": "assets/app.ico",
+    "signCommand": "echo @@BINARY_PATH@@"
+  },
+  "mac": {
+    "bundle": {
+      "name": "MyApp",
+      "id": "com.mycompany.myapp"
+    },
+    "icnsPath": "assets/app.icns",
+    "codesignIdentity": "${CODESIGN_IDENTITY}",
+    "codesignEntitlements": "assets/entitlements.plist",
+    "teamID": "${TEAM_ID}",
+    "appleID": "${APPLE_ID}",
+    "password": "${PASSWORD}"
+  },
+  "linux": {
+    "executableName": "myapp"
+  }
+}
