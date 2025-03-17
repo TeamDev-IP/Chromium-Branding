@@ -36,12 +36,14 @@ const (
 	binariesDirFlag       = "binaries_dir"
 	jsonPathFlag          = "params"
 	outputBinariesDirFlag = "output_dir"
+	skipSigningFrag       = "skip_signing"   
 	verboseFlag           = "verbose"
 )
 
 var jsonPath string
 var binariesDir string
 var outputDirPath string
+var skipSigning bool
 var verbose bool
 
 var rootCmd = &cobra.Command{
@@ -72,12 +74,14 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to brand Chromium binaries: %w", err)
 		}
 
-		if _, err := core.SignAppBinaries(outputDirPath, *params); err != nil {
-			return err
-		}
+		if !skipSigning {
+			if _, err := core.SignAppBinaries(outputDirPath, *params); err != nil {
+				return err
+			}
 
-		if _, err = mac.Notarize(outputDirPath, *params); err != nil {
-			return err
+			if _, err = mac.Notarize(outputDirPath, *params); err != nil {
+				return err
+			}	
 		}
 
 		return nil
@@ -101,6 +105,8 @@ func init() {
 		`absolute path to the JSON file with the custom branding parameters`)
 	rootCmd.Flags().StringVarP(&outputDirPath, outputBinariesDirFlag, "o", "",
 		`absolute path to the directory where the branded Chromium binaries will be stored`)
+	rootCmd.Flags().BoolVarP(&skipSigning, skipSigningFrag, "s", false,
+		`skips binaries signing`)	
 	rootCmd.Flags().BoolVarP(&verbose, verboseFlag, "v", false,
 		`enable verbose output`)
 }
