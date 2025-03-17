@@ -112,3 +112,5 @@ If you want to deploy the customized Chromium binaries with your software, you n
 The `win.signCommand` parameter in the `params.json` file allows you to sign the Windows executable.
 
 The `mac.codesignIdentity`, `mac.codesignEntitlements`, `mac.teamID`, `mac.appleID`, and `mac.password` parameters in the `params.json` file allow you to sign and notarize the macOS app bundle.
+
+If you want to skip this step, add `-s` p
