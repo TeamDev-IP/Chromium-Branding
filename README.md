@@ -113,4 +113,4 @@ The `win.signCommand` parameter in the `params.json` file allows you to sign the
 
 The `mac.codesignIdentity`, `mac.codesignEntitlements`, `mac.teamID`, `mac.appleID`, and `mac.password` parameters in the `params.json` file allow you to sign and notarize the macOS app bundle.
 
-If you want to skip this step, add `-s` p
+If you want to skip this step, add `-s` parameter to the command.
