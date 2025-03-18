@@ -176,7 +176,7 @@ jobs:
             dist/macos-latest-build/*
             dist/macos-13-build/*
           tag_name: ${{ github.ref_name }}
-          name: "Chromium-Branding ${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
           draft: true
       - name: Check artifacts
         run: ls -R dist
