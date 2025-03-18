@@ -39,9 +39,14 @@ func GetSignToolMac(params common.BrandingParams) (*SignToolMac, error) {
 
 // Signs the Chromium binaries located at `binaryPath`.
 func (tool *SignToolMac) SignBinary(binaryPath string) error {
+	// Skip signing and verifying if the identity is not set.
+	if base.GetValue(tool.params.Mac.CodesignIdentity) == "" {
+		return nil
+	}
 	if err := tool.sign(binaryPath); err != nil {
 		return err
-	} else if err := tool.verify(binaryPath); err != nil {
+	}
+	if err := tool.verify(binaryPath); err != nil {
 		return err
 	}
 	return nil
