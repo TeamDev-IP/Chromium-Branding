@@ -163,7 +163,7 @@ jobs:
       - name: Rename artifacts
         run: |
           mv dist/ubuntu-latest-build/chromium_branding-ubuntu-latest.zip dist/ubuntu-latest-build/chromium_branding_linux_x64.zip
-          mv dist/windows-latest-build/chromium_branding-windows-latest.exe dist/windows-latest-build/chromium_branding_windows_x64.exe
+          mv dist/windows-latest-build/chromium_branding.exe dist/windows-latest-build/chromium_branding_windows_x64.exe
           mv dist/macos-latest-build/chromium_branding-macos-latest.zip dist/macos-latest-build/chromium_branding_macos_arm64.zip
           mv dist/macos-13-build/chromium_branding-macos-13.zip dist/macos-13-build/chromium_branding_macos_x64.zip
 
