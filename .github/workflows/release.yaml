@@ -21,7 +21,7 @@ jobs:
           go-version: '1.20'
       - name: Build
         run: |
-            go build -o chromium_branding-windows-latest.exe .
+            go build -o chromium_branding.exe .
 
       - name: Install Yubico
         shell: pwsh
@@ -54,13 +54,13 @@ jobs:
           Set-ItemProperty -path HKLM:\SOFTWARE\Yubico\YubiHSM -name ConnectorURL -Type String -Value $Env:YUBIHSM_CONNECTOR_URL
 
           $Env:CODESIGN_CERT > certificate.crt
-          signtool sign /csp "YubiHSM Key Storage Provider" /kc "$Env:WIN_CODESIGN_KEY_CONTAINER" /f certificate.crt /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 chromium_branding-windows-latest.exe
+          signtool sign /csp "YubiHSM Key Storage Provider" /kc "$Env:WIN_CODESIGN_KEY_CONTAINER" /f certificate.crt /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 chromium_branding.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-latest-build
-          path: chromium_branding-windows-latest.exe
+          path: chromium_branding.exe
           if-no-files-found: ignore
 
   build-linux:
@@ -75,8 +75,8 @@ jobs:
           go-version: '1.20'
       - name: Build
         run: |
-            go build -o chromium_branding-ubuntu-latest .
-            zip chromium_branding-ubuntu-latest.zip chromium_branding-ubuntu-latest
+            go build -o chromium_branding .
+            zip chromium_branding-ubuntu-latest.zip chromium_branding
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -103,7 +103,7 @@ jobs:
 
       - name: Build
         run: |
-            go build -o chromium_branding-${{ matrix.os }} .
+            go build -o chromium_branding .
 
       - name: Set up keychain and sign
         env:
@@ -135,10 +135,10 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-          chmod +x ./chromium_branding-${{ matrix.os }}
-          codesign --force --options runtime --timestamp --verbose --sign "$CODESIGN_IDENTITY" ./chromium_branding-${{ matrix.os }}
+          chmod +x ./chromium_branding
+          codesign --force --options runtime --timestamp --verbose --sign "$CODESIGN_IDENTITY" ./chromium_branding
           
-          zip chromium_branding-${{ matrix.os }}.zip chromium_branding-${{ matrix.os }}
+          zip chromium_branding-${{ matrix.os }}.zip chromium_branding
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
