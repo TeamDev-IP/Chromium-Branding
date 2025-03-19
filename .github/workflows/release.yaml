@@ -56,11 +56,16 @@ jobs:
           $Env:CODESIGN_CERT > certificate.crt
           signtool sign /csp "YubiHSM Key Storage Provider" /kc "$Env:WIN_CODESIGN_KEY_CONTAINER" /f certificate.crt /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 chromium_branding.exe
 
+      - name: Compress
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "chromium_branding.exe" -DestinationPath "chromium_branding.zip"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-latest-build
-          path: chromium_branding.exe
+          path: chromium_branding.zip
           if-no-files-found: ignore
 
   build-linux:
@@ -163,9 +168,9 @@ jobs:
       - name: Rename artifacts
         run: |
           mv dist/ubuntu-latest-build/chromium_branding-ubuntu-latest.zip dist/ubuntu-latest-build/chromium_branding_linux_x64.zip
-          mv dist/windows-latest-build/chromium_branding.exe dist/windows-latest-build/chromium_branding_windows_x64.exe
-          mv dist/macos-latest-build/chromium_branding-macos-latest.zip dist/macos-latest-build/chromium_branding_macos_arm64.zip
-          mv dist/macos-13-build/chromium_branding-macos-13.zip dist/macos-13-build/chromium_branding_macos_x64.zip
+          mv dist/windows-latest-build/chromium_branding.zip dist/windows-latest-build/chromium_branding_win_x64.zip
+          mv dist/macos-latest-build/chromium_branding-macos-latest.zip dist/macos-latest-build/chromium_branding_mac_arm64.zip
+          mv dist/macos-13-build/chromium_branding-macos-13.zip dist/macos-13-build/chromium_branding_mac_x64.zip
 
       - name: Create GitHub Release draft
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
