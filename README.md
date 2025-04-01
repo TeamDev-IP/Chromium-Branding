@@ -12,11 +12,8 @@ Make sure you install [Go](https://go.dev/dl/) 1.20+ and add it to the `PATH` en
 
 ### Windows
 
-On Windows, you also have to install the [up-to-date Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/).
-
-**Important**: if you install or have already installed it to the **custom location**, you have to add its bin directory for the
-current platform architecture to `PATH`.
-For example, for default location, it will be `C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64`.
+On Windows, install the [up-to-date Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/).
+If you use custom install location, add its bin directory to `PATH` (`C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64` for default location).
 
 ## Building
 
