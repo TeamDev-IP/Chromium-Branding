@@ -75,7 +75,7 @@ func FetchRcedit() (*Rcedit, error) {
 
 // SetIcon uses rcedit to replace the icon resource of the
 // specified chromiumBinaryPath with the file at iconPath.
-func (rcedit *Rcedit) SetIcon(chromiumBinary base.File, icon base.File) error {
+func (rcedit *Rcedit) SetIcon(chromiumBinary UnsignedBinary, icon base.File) error {
 	fmt.Println("Setting icon for " + chromiumBinary.AbsPath().String())
 	return base.ExecCommand(rcedit.toolPath, []string{chromiumBinary.AbsPath().String(), setIconFlag, icon.AbsPath().String()})
 }
@@ -83,7 +83,7 @@ func (rcedit *Rcedit) SetIcon(chromiumBinary base.File, icon base.File) error {
 // SetVersion uses rcedit to set both the file version and
 // product version of the specified chromiumBinaryPath to version.
 // It first sets the file version, then the product version.
-func (rcedit *Rcedit) SetVersion(chromiumBinary base.File, version string) error {
+func (rcedit *Rcedit) SetVersion(chromiumBinary UnsignedBinary, version string) error {
 	err := base.ExecCommand(rcedit.toolPath, []string{
 		chromiumBinary.AbsPath().String(),
 		setFileVersionFlag,
@@ -101,7 +101,7 @@ func (rcedit *Rcedit) SetVersion(chromiumBinary base.File, version string) error
 // SetVersionString uses rcedit to set an arbitrary version string
 // field (e.g., CompanyName, ProductName, etc.) in the specified
 // chromiumBinaryPath to the provided versionStringValue.
-func (rcedit *Rcedit) SetVersionString(chromiumBinary base.File, versionStringKey, versionStringValue string) error {
+func (rcedit *Rcedit) SetVersionString(chromiumBinary UnsignedBinary, versionStringKey, versionStringValue string) error {
 	return base.ExecCommand(rcedit.toolPath, []string{
 		chromiumBinary.AbsPath().String(),
 		setVersionStringFlag,
@@ -111,28 +111,28 @@ func (rcedit *Rcedit) SetVersionString(chromiumBinary base.File, versionStringKe
 
 // SetProcessDescription sets the FileDescription version string
 // for the given chromiumBinaryPath to the provided description.
-func (rcedit *Rcedit) SetProcessDescription(chromiumBinary base.File, description string) error {
+func (rcedit *Rcedit) SetProcessDescription(chromiumBinary UnsignedBinary, description string) error {
 	fmt.Println("Setting description for " + chromiumBinary.AbsPath().String() + " : " + description)
 	return rcedit.SetVersionString(chromiumBinary, fileDescriptionVersionString, description)
 }
 
 // SetAuthor sets the CompanyName version string for the given
 // chromiumBinaryPath to the provided author name.
-func (rcedit *Rcedit) SetAuthor(chromiumBinary base.File, author string) error {
+func (rcedit *Rcedit) SetAuthor(chromiumBinary UnsignedBinary, author string) error {
 	fmt.Println("Setting author for " + chromiumBinary.AbsPath().String() + " : " + author)
 	return rcedit.SetVersionString(chromiumBinary, authorVersionString, author)
 }
 
 // SetProductName sets the ProductName version string for the
 // given chromiumBinaryPath to the provided product name.
-func (rcedit *Rcedit) SetProductName(chromiumBinary base.File, productName string) error {
+func (rcedit *Rcedit) SetProductName(chromiumBinary UnsignedBinary, productName string) error {
 	fmt.Println("Setting product name for " + chromiumBinary.AbsPath().String() + " : " + productName)
 	return rcedit.SetVersionString(chromiumBinary, productNameVersionString, productName)
 }
 
 // SetCopyright sets the LegalCopyright version string
 // for the given chromiumBinaryPath to the provided text.
-func (rcedit *Rcedit) SetCopyright(chromiumBinary base.File, copyright string) error {
+func (rcedit *Rcedit) SetCopyright(chromiumBinary UnsignedBinary, copyright string) error {
 	fmt.Println("Setting copyright for " + chromiumBinary.AbsPath().String() + " : " + copyright)
 	return rcedit.SetVersionString(chromiumBinary, copyrightVersionString, copyright)
 }

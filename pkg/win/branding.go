@@ -59,14 +59,14 @@ func (branding *WinBranding) ExecutableName(params *common.BrandingParams) strin
 
 // SetIcon calls the underlying rcedit tool to replace the icon
 // resource in the specified Windows executable or DLL file.
-func (branding *WinBranding) SetIcon(binaryFile base.File, icon base.File) error {
+func (branding *WinBranding) SetIcon(binaryFile UnsignedBinary, icon base.File) error {
 	return branding.rceditTool.SetIcon(binaryFile, icon)
 }
 
 // SetFileDescription updates the FileDescription resource of the
 // specified Windows executable or DLL to the provided description.
 // This is often displayed in Task Manager or file properties.
-func (branding *WinBranding) SetFileDescription(description string, binaryFile base.File) {
+func (branding *WinBranding) SetFileDescription(description string, binaryFile UnsignedBinary) {
 	branding.rceditTool.SetProcessDescription(binaryFile, description)
 }
 
@@ -83,7 +83,12 @@ func (branding *WinBranding) Apply(params *common.BrandingParams, binariesDir ba
 		return err
 	}
 
-	chromiumExecutable, err := binariesToBrand.ChromiumExePath().AsFile()
+	initialChromiumExecutable, err := binariesToBrand.ChromiumExePath().AsFile()
+	if err != nil {
+		return err
+	}
+
+	chromiumExecutable, err := RemoveSignature(initialChromiumExecutable)
 	if err != nil {
 		return err
 	}
@@ -92,7 +97,7 @@ func (branding *WinBranding) Apply(params *common.BrandingParams, binariesDir ba
 		newChromiumExeFilename := *params.Win.ExecutableName + ".exe"
 		fmt.Println("Renaming ", chromiumExecutable.AbsPath().String(), "==>", newChromiumExeFilename)
 
-		if err := chromiumExecutable.Rename(newChromiumExeFilename); err != nil {
+		if err := chromiumExecutable.File().Rename(newChromiumExeFilename); err != nil {
 			return errors.Join(err, errors.New("failed to rename "+chromiumExecutable.AbsPath().String()))
 		}
 	}
@@ -133,12 +138,17 @@ func (branding *WinBranding) Apply(params *common.BrandingParams, binariesDir ba
 			return err
 		}
 
-		chromeDll, err := binariesToBrand.ChromeDllPath().AsFile()
+		initialChromeDll, err := binariesToBrand.ChromeDllPath().AsFile()
 		if err != nil {
 			return err
 		}
 
-		for _, binaryFile := range []base.File{chromiumExecutable, chromeDll} {
+		chromeDll, err := RemoveSignature(initialChromeDll)
+		if err != nil {
+			return err
+		}
+
+		for _, binaryFile := range []UnsignedBinary{chromiumExecutable, chromeDll} {
 			if err := branding.SetIcon(binaryFile, icon); err != nil {
 				return err
 			}

@@ -134,6 +134,11 @@ func (directory Directory) AbsPath() AbsPath {
 	return directory.path
 }
 
+// Parent returns the absolute path of the parent directory of the given path.
+func (directory Directory) Parent() Directory {
+	return Directory{directory.path.Parent()}
+}
+
 // Copy recursively copies the directory to the specified destination path.
 // If the destination already exists, it merges or overwrites contents as determined by cp.Copy.
 func (directory Directory) Copy(destination AbsPath) error {
