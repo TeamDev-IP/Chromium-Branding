@@ -8,12 +8,9 @@ This command line tool allows you to customize the Chromium binaries by changing
 
 ## Prerequisites
 
-Make sure you install [Go](https://go.dev/dl/) 1.20+ and add it to the `PATH` environment variable.
-
-### Windows
-
-On Windows, install the [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/).
-If you use custom install location, add its bin directory to `PATH` (`C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64` for default location).
+- [Go](https://go.dev/dl/) 1.20 or higher.
+- [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) on Windows.
+- [Xcode](https://developer.apple.com/xcode/) on macOS.
 
 ## Building
 
