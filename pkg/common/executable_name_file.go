@@ -26,17 +26,25 @@ import (
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/base"
 )
 
-// WriteExecutableName creates (or truncates) a file named "executable.name" inside
-// the provided binariesDir directory and writes the given executableName string into it.
-//
-// It returns an error if the file cannot be created or if writing to the file fails.
-func WriteExecutableName(executableName string, binariesDir base.Directory) error {
-	file, err := os.Create(binariesDir.AbsPath().Join(base.RelPathFromEntries("executable.name")).String())
+// ExecutableNameFile represents a file that holds the name of the main executable.
+// This file is named "executable.name" and is stored in a specific resources directory.
+type ExecutableNameFile struct {
+	// Location is the directory where the executable name file is to be located.
+	Location base.Directory
+	// Content is the name of the main executable to be written into the file.
+	Content string
+}
+
+// CreateOrUpdate creates or updates the executable name file in the specified location.
+// It writes the Content field to a file named "executable.name" inside the Location directory.
+// Returns an error if the file cannot be created or written to.
+func (executableName *ExecutableNameFile) CreateOrUpdate() error {
+	file, err := os.Create(executableName.Location.AbsPath().Join(base.RelPathFromEntries("executable.name")).String())
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(executableName)
+	_, err = file.WriteString(executableName.Content)
 	return err
 }

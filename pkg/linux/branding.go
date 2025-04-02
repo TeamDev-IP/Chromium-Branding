@@ -37,6 +37,13 @@ func GetPlatformBranding() (*LinuxBranding, error) {
 // LinuxBranding implements branding logic specific to Linux platforms.
 type LinuxBranding struct{}
 
+func (branding *LinuxBranding) ExecutableNameFile(params *common.BrandingParams, binariesDir base.Directory) (common.ExecutableNameFile, error) {
+	return common.ExecutableNameFile{
+		Location: binariesDir,
+		Content:  branding.ExecutableName(params),
+	}, nil
+}
+
 // ExecutableName returns the Linux process name from BrandingParams if set,
 // or defaults to "chromium" otherwise.
 func (branding *LinuxBranding) ExecutableName(params *common.BrandingParams) string {

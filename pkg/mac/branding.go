@@ -99,6 +99,24 @@ func (branding *MacBranding) Apply(params *common.BrandingParams, binariesDir ba
 	return nil
 }
 
+func (branding *MacBranding) ExecutableNameFile(params *common.BrandingParams, binariesDir base.Directory) (common.ExecutableNameFile, error) {
+	executableName := branding.ExecutableName(params)
+	mainBundle, err := GetChromiumAppBundle(binariesDir, executableName)
+	if err != nil {
+		return common.ExecutableNameFile{}, err
+	}
+
+	resourcesDir, err := mainBundle.ChromiumAppBundle().Path().Join(base.RelPathFromEntries("Contents", "Resources")).AsDirectory()
+	if err != nil {
+		return common.ExecutableNameFile{}, err
+	}
+
+	return common.ExecutableNameFile{
+		Location: resourcesDir,
+		Content:  executableName,
+	}, nil
+}
+
 func (branding *MacBranding) ExecutableName(params *common.BrandingParams) string {
 	if params.Mac.Bundle.Name != nil {
 		return *params.Mac.Bundle.Name

@@ -43,9 +43,13 @@ func (unsignedBinary UnsignedBinary) AbsPath() base.AbsPath {
 	return unsignedBinary.File().AbsPath()
 }
 
-// File returns a pointer to the underlying File in UnsignedBinary.
-// The caller can use this file for further operations (e.g., reading,
-// copying, or renaming).
+// RemoveSignature uses the Windows SDK signtool.exe to remove a digital signature
+// from the given binary. It returns an UnsignedBinary if the operation succeeds,
+// or an error if it fails.
+//
+//   - binary: The file from which the signature should be removed.
+//   - returns: An UnsignedBinary containing the same file with the signature removed,
+//     or an error if removal fails (e.g., if the file isn't signed or can't be accessed).
 func RemoveSignature(binary base.File) (UnsignedBinary, error) {
 	winSdk, err := FindWinSdk()
 	if err != nil {

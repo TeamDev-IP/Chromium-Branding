@@ -48,6 +48,13 @@ func GetPlatformBranding() (*WinBranding, error) {
 	}
 }
 
+func (branding *WinBranding) ExecutableNameFile(params *common.BrandingParams, binariesDir base.Directory) (common.ExecutableNameFile, error) {
+	return common.ExecutableNameFile{
+		Location: binariesDir,
+		Content:  branding.ExecutableName(params),
+	}, nil
+}
+
 // ExecutableName returns the user-specified Windows executable name
 // if set in BrandingParams, or falls back to original chromium executable name.
 func (branding *WinBranding) ExecutableName(params *common.BrandingParams) string {

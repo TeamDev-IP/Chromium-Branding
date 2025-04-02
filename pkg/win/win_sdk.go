@@ -32,18 +32,27 @@ const supportedArch = "x64"
 
 var availableSdk *WinSdk
 
+// WinSdk encapsulates a Windows SDK installation by holding a reference
+// to its binaries directory.
 type WinSdk struct {
 	binDir base.Directory
 }
 
+// Path returns the absolute path to the Windows SDK bin directory.
 func (sdk *WinSdk) Path() base.AbsPath {
 	return sdk.binDir.AbsPath()
 }
 
+// SigntoolPath returns the absolute path to the signtool.exe located within
+// the Windows SDK bin directory.
 func (sdk *WinSdk) SigntoolPath() base.AbsPath {
 	return sdk.Path().Join(base.RelPathFromEntries("signtool.exe"))
 }
 
+// FindWinSdk attempts to locate a Windows SDK installation by first checking
+// the system PATH for signtool.exe and, if not found, falling back to the
+// default Windows Kits installation location.
+// It returns a WinSdk instance if found, or an error if no suitable SDK can be located.
 func FindWinSdk() (*WinSdk, error) {
 	if availableSdk != nil {
 		return availableSdk, nil
@@ -63,6 +72,8 @@ func FindWinSdk() (*WinSdk, error) {
 	return defaultWinSdk, err
 }
 
+// WinSdkFromPathEnv tries to locate signtool.exe by invoking the "where" command.
+// If found, it converts the result to a base.Directory and returns a WinSdk instance.
 func WinSdkFromPathEnv() (*WinSdk, error) {
 	where, err := base.ExecCommandAndGetOutput("where", []string{"signtool"})
 	if err != nil {
@@ -75,6 +86,9 @@ func WinSdkFromPathEnv() (*WinSdk, error) {
 	return &WinSdk{sdkBinDir}, err
 }
 
+// DefaultWinSdk searches the default Windows SDK install path for a Windows 10/11 SDK.
+// It looks for a directory structure matching "bin/10/<version>/<supportedArch>" and returns
+// the latest valid WinSdk found. If none is found, an error with installation instructions is returned.
 func DefaultWinSdk() (*WinSdk, error) {
 	defaultWinSdksInstallDir, err := base.DirectoryFromPathString(defaultWinSdksInstallPath)
 	if err != nil {
@@ -87,7 +101,6 @@ func DefaultWinSdk() (*WinSdk, error) {
 		versions := sdkVersionsDir.ChildDirs()
 		sort.SliceStable(versions, func(i, j int) bool { return versions[i].AbsPath().Base() > versions[j].AbsPath().Base() })
 		for _, version := range versions {
-			fmt.Println(version.AbsPath().String())
 			if sdkBinPath, err := version.AbsPath().Join(base.RelPathFromEntries(supportedArch)).AsDirectory(); err == nil {
 				return &WinSdk{sdkBinPath}, nil
 			} else {

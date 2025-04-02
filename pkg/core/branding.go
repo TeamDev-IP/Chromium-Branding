@@ -97,9 +97,10 @@ type PlatformBranding interface {
 	// according to the provided BrandingParams.
 	Apply(params *common.BrandingParams, binariesDir base.Directory) error
 
-	// ExecutableName returns the name of the main executable file,
-	// derived from the BrandingParams.
-	ExecutableName(params *common.BrandingParams) string
+	// ExecutableNameFile returns common.ExecutableNameFile for the Chromium binaries from the given
+	// binariesDir assuming they are branded with the given params.
+	// Returns an error if the file destination is invalid or cannot be determined.
+	ExecutableNameFile(params *common.BrandingParams, binariesDir base.Directory) (common.ExecutableNameFile, error)
 }
 
 // Branding wraps a set of BrandingParams and a PlatformBranding
@@ -150,9 +151,10 @@ func brandBinariesInDirectory(branding *Branding, params common.BrandingParams, 
 	if err := branding.Apply(outputDir); err != nil {
 		return err
 	}
-	if err := common.WriteExecutableName(branding.platform.ExecutableName(&params), outputDir); err != nil {
-		return err
+	executableNameFile, err := branding.platform.ExecutableNameFile(&params, outputDir)
+	if err != nil {
+		return fmt.Errorf("the executable.name file destination is invalid: %w", err)
 	}
 
-	return nil
+	return executableNameFile.CreateOrUpdate()
 }
