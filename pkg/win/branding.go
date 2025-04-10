@@ -23,6 +23,7 @@ package win
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/base"
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/common"
@@ -162,5 +163,16 @@ func (branding *WinBranding) Apply(params *common.BrandingParams, binariesDir ba
 		}
 	}
 
+	return removeSigFiles(binariesDir)
+}
+
+func removeSigFiles(binariesDir base.Directory) error {
+	for _, file := range binariesDir.ListFiles() {
+		if strings.HasSuffix(file.AbsPath().Base(), ".sig") {
+			if err := file.Remove(); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
