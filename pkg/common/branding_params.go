@@ -71,11 +71,12 @@ type Mac struct {
 	// Bundle contains metadata related to the macOS application bundle.
 	Bundle *Bundle
 
-	TeamId               string
-	CodesignIdentity     string
-	CodesignEntitlements string
-	AppleId              string
-	Password             string
+	TeamId                  string
+	CodesignIdentity        string
+	CodesignEntitlements    string
+	AppleId                 string
+	Password                string
+	InformationPropertyList string
 }
 
 // Linux holds Linux-specific branding parameters.

@@ -52,7 +52,14 @@ func (branding *MacBranding) ApplyToBundle(params *common.BrandingParams, appBun
 		BundleId:       params.Mac.Bundle.Id,
 	}
 
-	if err := cofigureBundlePlist(appBundle, appInfo); err != nil {
+	if params.Mac.InformationPropertyList != "" {
+		err := copyCustomPlist(appBundle, params.Mac.InformationPropertyList)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := configureBundlePlist(appBundle, appInfo); err != nil {
 		return err
 	}
 
@@ -142,7 +149,25 @@ func iconExpectedFor(appBundle ChromiumAppBundle) bool {
 	return appBundle.GetType() == CrBundleMain || appBundle.GetType() == CrBundleHelperAlerts
 }
 
-func cofigureBundlePlist(bundle ChromiumAppBundle, appInfo AppInfo) error {
+func copyCustomPlist(appBundle ChromiumAppBundle, customPlistPath string) error {
+	sourcePath, err := base.AbsPathFromPathString(customPlistPath)
+	if err != nil {
+		return err
+	}
+	sourceFile, err := sourcePath.AsFile()
+	if err != nil {
+		return err
+	}
+
+	destFile, err := appBundle.PlistFilePath().AsFile()
+	if err != nil {
+		return err
+	}
+
+	return destFile.Replace(sourceFile)
+}
+
+func configureBundlePlist(bundle ChromiumAppBundle, appInfo AppInfo) error {
 	return base.AnyErrorFrom(
 		overrideBundleName(bundle, appInfo.ExecutableName),
 		overrideBundleId(bundle, appInfo.BundleId),
