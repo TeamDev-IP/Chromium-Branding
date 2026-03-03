@@ -110,15 +110,22 @@ jobs:
         run: |
             go build -o chromium_branding .
 
-      - name: Set up keychain and sign
+      - name: Set up keychain, sign, and notarize
         env:
           BUILD_CERT_BASE64: ${{ secrets.APPLE_DEV_CERT_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
           CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+  
+          NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          NOTARY_KEY_P8: ${{ secrets.APPLE_NOTARY_KEY_P8 }}
         run: |
+          set -euo pipefail
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          ZIP_PATH="chromium_branding-${{ matrix.os }}.zip"
+          NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey_${NOTARY_KEY_ID}.p8"
 
           echo -n "$BUILD_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
 
@@ -142,8 +149,22 @@ jobs:
 
           chmod +x ./chromium_branding
           codesign --force --options runtime --timestamp --verbose --sign "$CODESIGN_IDENTITY" ./chromium_branding
-          
-          zip chromium_branding-${{ matrix.os }}.zip chromium_branding
+          codesign --verify --strict --verbose=2 ./chromium_branding
+
+          # write notary API key (multiline secret) to disk
+          printf '%s' "$NOTARY_KEY_P8" | tr -d '\r' > "$NOTARY_KEY_PATH"
+          chmod 600 "$NOTARY_KEY_PATH"
+
+          # package for upload (notarytool accepts .zip)
+          zip -q "$ZIP_PATH" chromium_branding
+
+          # notarize
+          xcrun notarytool submit "$ZIP_PATH" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait --timeout 30m \
+            --output-format json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
