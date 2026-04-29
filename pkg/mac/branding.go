@@ -71,6 +71,16 @@ func (branding *MacBranding) ApplyToBundle(params *common.BrandingParams, appBun
 		if err := configureBundleIcon(appBundle, iconPath); err != nil {
 			return err
 		}
+		plistFile, err := appBundle.PlistFilePath().AsFile()
+		if err != nil {
+			return err
+		}
+		if _, err := getPlistProperty(plistFile, bundleIconNameAssetProperty); err == nil {
+			// Delete the property only in the newer Chromium bundles where it's present.
+			if err := deletePlistProperty(plistFile, bundleIconNameAssetProperty); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -130,6 +140,8 @@ func (branding *MacBranding) ExecutableName(params *common.BrandingParams) strin
 	}
 	return "Chromium"
 }
+
+const bundleIconNameAssetProperty = "CFBundleIconName"
 
 var bundleIdProperties = []string{
 	"CFBundleIdentifier",
@@ -207,8 +219,17 @@ func overrideBundleProperties(bundle ChromiumAppBundle, properties []string, val
 	return nil
 }
 
+func getPlistProperty(plist base.File, key string) (string, error) {
+	return base.ExecCommandAndGetOutput("defaults", []string{"read", plist.AbsPath().String(), key})
+}
+
 func setPlistProperty(plist base.File, key, value string) error {
 	return base.ExecCommand("defaults", []string{"write", plist.AbsPath().String(), key, "\"" + value + "\""})
+}
+
+func deletePlistProperty(plist base.File, key string) error {
+	base.ExecCommand("defaults", []string{"delete", plist.AbsPath().String(), key})
+	return nil
 }
 
 func overrideBundleName(bundle ChromiumAppBundle, name *string) error {
