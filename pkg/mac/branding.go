@@ -75,9 +75,9 @@ func (branding *MacBranding) ApplyToBundle(params *common.BrandingParams, appBun
 		if err != nil {
 			return err
 		}
-		if _, err := getPlistProperty(plistFile, "CFBundleIconName"); err == nil {
+		if _, err := getPlistProperty(plistFile, bundleIconNameAssetProperty); err == nil {
 			// Delete the property only in the newer Chromium bundles where it's present.
-			if err := deletePlistProperty(plistFile, "CFBundleIconName"); err != nil {
+			if err := deletePlistProperty(plistFile, bundleIconNameAssetProperty); err != nil {
 				return err
 			}
 		}
@@ -140,6 +140,8 @@ func (branding *MacBranding) ExecutableName(params *common.BrandingParams) strin
 	}
 	return "Chromium"
 }
+
+const bundleIconNameAssetProperty = "CFBundleIconName"
 
 var bundleIdProperties = []string{
 	"CFBundleIdentifier",
