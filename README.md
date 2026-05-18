@@ -19,13 +19,14 @@ Run the following command in the root directory of the repository:
 ### Windows
 
 ```sh
+set CGO_ENABLED=0
 go build -o chromium_branding.exe
 ```
 
 ### macOS/Linux
 
 ```sh
-go build -o chromium_branding
+CGO_ENABLED=0 go build -o chromium_branding
 ```
 
 You will find the `chromium_branding(.exe)` executable there.
