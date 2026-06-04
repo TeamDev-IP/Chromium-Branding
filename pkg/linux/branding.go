@@ -47,8 +47,8 @@ func (branding *LinuxBranding) ExecutableNameFile(params *common.BrandingParams,
 // ExecutableName returns the Linux process name from BrandingParams if set,
 // or defaults to "chromium" otherwise.
 func (branding *LinuxBranding) ExecutableName(params *common.BrandingParams) string {
-	if params.Linux.ProcessName != nil {
-		return *params.Linux.ProcessName
+	if params.Linux.ExecutableName != nil {
+		return *params.Linux.ExecutableName
 	}
 
 	return originalChromiumExeName
@@ -72,8 +72,8 @@ func (branding *LinuxBranding) Apply(params *common.BrandingParams, binariesDir 
 		return nil
 	}
 
-	if params.Linux.ProcessName != nil {
-		if err := chromiumExe.Rename(*params.Linux.ProcessName); err != nil {
+	if params.Linux.ExecutableName != nil {
+		if err := chromiumExe.Rename(*params.Linux.ExecutableName); err != nil {
 			return err
 		}
 	}
