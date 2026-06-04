@@ -81,9 +81,9 @@ type Mac struct {
 
 // Linux holds Linux-specific branding parameters.
 type Linux struct {
-	// ProcessName is the name of the running process (e.g., the
+	// ExecutableName is the name of the running process (e.g., the
 	// display in system monitors or process listings).
-	ProcessName *string
+	ExecutableName *string
 }
 
 // BrandingParams holds versioning and platform-specific branding
