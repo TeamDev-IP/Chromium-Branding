@@ -17,6 +17,7 @@
     "icnsPath": "assets/app.icns",
     "codesignIdentity": "${CODESIGN_IDENTITY}",
     "codesignEntitlements": "assets/entitlements.plist",
+    "provisioningProfile": "",
     "teamID": "${TEAM_ID}",
     "appleID": "${APPLE_ID}",
     "password": "${PASSWORD}"

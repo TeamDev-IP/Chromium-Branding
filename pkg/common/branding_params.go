@@ -74,6 +74,7 @@ type Mac struct {
 	TeamId                  string
 	CodesignIdentity        string
 	CodesignEntitlements    string
+	ProvisioningProfile     string
 	AppleId                 string
 	Password                string
 	InformationPropertyList string

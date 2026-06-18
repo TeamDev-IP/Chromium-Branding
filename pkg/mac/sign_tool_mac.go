@@ -43,7 +43,7 @@ func (tool *SignToolMac) SignBinary(binaryPath string) error {
 	if base.GetValue(tool.params.Mac.CodesignIdentity) == "" {
 		return nil
 	}
-	if err := tool.sign(binaryPath); err != nil {
+	if err := tool.sign(binaryPath, tool.params.Mac.CodesignEntitlements); err != nil {
 		return err
 	}
 	if err := tool.verify(binaryPath); err != nil {
@@ -52,13 +52,29 @@ func (tool *SignToolMac) SignBinary(binaryPath string) error {
 	return nil
 }
 
-func (tool *SignToolMac) sign(binaryPath string) error {
+// Signs the binary at `binaryPath` using the given `entitlements` file.
+// Use this for helper bundles and dylibs that require different entitlements
+// than the main application.
+func (tool *SignToolMac) SignBinaryWithEntitlements(binaryPath, entitlements string) error {
+	if base.GetValue(tool.params.Mac.CodesignIdentity) == "" {
+		return nil
+	}
+	if err := tool.sign(binaryPath, entitlements); err != nil {
+		return err
+	}
+	if err := tool.verify(binaryPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (tool *SignToolMac) sign(binaryPath, entitlements string) error {
 	return base.ExecCommand("codesign",
 		[]string{
 			"--force",
 			"--options", "runtime",
 			"--timestamp",
-			"--entitlements", tool.params.Mac.CodesignEntitlements,
+			"--entitlements", entitlements,
 			"--verbose",
 			"--sign",
 			base.GetValue(tool.params.Mac.CodesignIdentity),

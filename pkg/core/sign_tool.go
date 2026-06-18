@@ -35,6 +35,14 @@ type SignTool interface {
 	SignBinary(binaryPath string) error
 }
 
+// MacSignTool extends SignTool with entitlements-aware signing, used to sign
+// helper bundles and dylibs with a filtered entitlements file that omits
+// keychain-access-groups (required on macOS 26+).
+type MacSignTool interface {
+	SignTool
+	SignBinaryWithEntitlements(binaryPath, entitlements string) error
+}
+
 // Tries to obtain the sign tool for the current platform.
 func GetSignTool(params common.BrandingParams) (SignTool, error) {
 	switch runtime.GOOS {
