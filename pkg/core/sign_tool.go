@@ -37,7 +37,7 @@ type SignTool interface {
 
 // MacSignTool extends SignTool with entitlements-aware signing, used to sign
 // helper bundles and dylibs with a filtered entitlements file that omits
-// keychain-access-groups (required on macOS 26+).
+// keychain-access-groups.
 type MacSignTool interface {
 	SignTool
 	SignBinaryWithEntitlements(binaryPath, entitlements string) error

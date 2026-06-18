@@ -152,7 +152,7 @@ In `params.json`, set:
 
 The tool will automatically:
 - Copy the profile into `<AppName>.app/Contents/embedded.provisionprofile` before signing.
-- Strip `keychain-access-groups` from the entitlements used for helper bundles and dylibs (required to prevent AMFI from killing them on macOS 26+).
+- Strip `keychain-access-groups` from the entitlements used for helper bundles and dylibs (required to prevent AMFI from killing them).
 
 If `keychain-access-groups` is present in your entitlements but `provisioningProfile` is not configured, the tool will exit with an error before any signing is attempted.
 

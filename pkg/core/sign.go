@@ -224,10 +224,7 @@ func writeHelperEntitlements(entitlementsPath string) (string, error) {
 }
 
 // plistWithoutKeychainAccessGroups returns a copy of the plist bytes with the
-// keychain-access-groups key/value pair removed. It works on raw bytes via
-// InputOffset so the original formatting (including <true/>) is preserved
-// exactly — re-encoding through xml.Encoder would rewrite <true/> as
-// <true></true>, which AMFI's plist parser rejects.
+// keychain-access-groups key/value pair removed.
 func plistWithoutKeychainAccessGroups(data []byte) ([]byte, error) {
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 
