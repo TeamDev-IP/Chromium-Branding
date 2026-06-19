@@ -137,6 +137,15 @@ func prepareForSigning(outDir string, params common.BrandingParams) (helperEntit
 		return "", "", err
 	}
 
+	bundleName := *params.Mac.Bundle.Name
+	profileDest := filepath.Join(outDir, bundleName+".app", "Contents", "embedded.provisionprofile")
+
+	// Always remove any pre-existing profile. It would be bound to TeamDev's
+	// Team ID and cause AMFI to reject the re-signed bundle.
+	if err := os.Remove(profileDest); err != nil && !os.IsNotExist(err) {
+		return "", "", fmt.Errorf("removing existing provisioning profile: %w", err)
+	}
+
 	if !hasKAG {
 		return entitlementsPath, "", nil
 	}
@@ -152,9 +161,7 @@ func prepareForSigning(outDir string, params common.BrandingParams) (helperEntit
 		return "", "", fmt.Errorf("checking provisioning profile %s: %w", profilePath, statErr)
 	}
 
-	bundleName := *params.Mac.Bundle.Name
-	destProfile := filepath.Join(outDir, bundleName+".app", "Contents", "embedded.provisionprofile")
-	if err := base.CopyFile(profilePath, destProfile); err != nil {
+	if err := base.CopyFile(profilePath, profileDest); err != nil {
 		return "", "", fmt.Errorf("copying provisioning profile: %w", err)
 	}
 
