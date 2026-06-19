@@ -215,109 +215,23 @@ func writeHelperEntitlements(entitlementsPath string) (string, error) {
 		return "", fmt.Errorf("reading entitlements: %w", err)
 	}
 
-	filtered, err := plistWithoutKeychainAccessGroups(data)
-	if err != nil {
-		return "", err
-	}
-
 	tmpFile, err := os.CreateTemp("", "helper-entitlements-*.plist")
 	if err != nil {
 		return "", fmt.Errorf("creating temp entitlements: %w", err)
 	}
-	defer tmpFile.Close()
-
-	if _, err := tmpFile.Write(filtered); err != nil {
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
 		os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("writing temp entitlements: %w", err)
 	}
+	tmpFile.Close()
+
+	if err := base.ExecCommand("plutil", []string{"-remove", "keychain-access-groups", tmpFile.Name()}); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("removing keychain-access-groups from entitlements: %w", err)
+	}
+
 	return tmpFile.Name(), nil
-}
-
-// plistWithoutKeychainAccessGroups returns a copy of the plist bytes with the
-// keychain-access-groups key/value pair removed.
-func plistWithoutKeychainAccessGroups(data []byte) ([]byte, error) {
-	decoder := xml.NewDecoder(bytes.NewReader(data))
-
-	var (
-		removeFrom      int64 = -1
-		removeTo        int64 = -1
-		prevWSStart     int64 = -1
-		candidateFrom   int64 = -1
-		inKey                 = false
-		foundKAGKey           = false
-		waitingForValue       = false
-		skipDepth             = 0
-	)
-
-	for removeTo < 0 {
-		tokStart := decoder.InputOffset()
-		tok, err := decoder.Token()
-		tokEnd := decoder.InputOffset()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("parsing entitlements plist: %w", err)
-		}
-
-		if skipDepth > 0 {
-			switch tok.(type) {
-			case xml.StartElement:
-				skipDepth++
-			case xml.EndElement:
-				skipDepth--
-				if skipDepth == 0 {
-					removeTo = tokEnd
-				}
-			}
-			continue
-		}
-
-		switch t := tok.(type) {
-		case xml.CharData:
-			if strings.TrimSpace(string(t)) == "" {
-				if !waitingForValue && !inKey {
-					prevWSStart = tokStart
-				}
-			} else if inKey && strings.TrimSpace(string(t)) == "keychain-access-groups" {
-				foundKAGKey = true
-			}
-		case xml.StartElement:
-			if t.Name.Local == "key" {
-				inKey = true
-				if prevWSStart >= 0 {
-					candidateFrom = prevWSStart
-				} else {
-					candidateFrom = tokStart
-				}
-			} else if waitingForValue {
-				removeFrom = candidateFrom
-				skipDepth = 1
-				waitingForValue = false
-			} else {
-				prevWSStart = -1
-			}
-		case xml.EndElement:
-			if t.Name.Local == "key" && inKey {
-				inKey = false
-				if foundKAGKey {
-					waitingForValue = true
-					foundKAGKey = false
-				} else {
-					candidateFrom = -1
-				}
-			}
-		}
-	}
-
-	if removeFrom < 0 || removeTo < 0 {
-		return data, nil
-	}
-
-	result := make([]byte, 0, int64(len(data))-(removeTo-removeFrom))
-	result = append(result, data[:removeFrom]...)
-	result = append(result, data[removeTo:]...)
-	return result, nil
 }
 
 func unableToSign(internalError error) error {
