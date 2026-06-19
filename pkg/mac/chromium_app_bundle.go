@@ -23,6 +23,7 @@ package mac
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/base"
@@ -154,7 +155,7 @@ func (bundle *ChromiumBundle) Rename(newName string) error {
 	for _, helperType := range crHelperTypes {
 		helperBundle, err := bundle.FindHelper(helperType, initialName)
 		if err != nil {
-			if crOptionalHelperTypes[helperType] {
+			if crOptionalHelperTypes[helperType] && os.IsNotExist(err) {
 				continue
 			}
 			return err
