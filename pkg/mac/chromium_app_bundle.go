@@ -23,6 +23,7 @@ package mac
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/base"
@@ -154,6 +155,9 @@ func (bundle *ChromiumBundle) Rename(newName string) error {
 	for _, helperType := range crHelperTypes {
 		helperBundle, err := bundle.FindHelper(helperType, initialName)
 		if err != nil {
+			if crOptionalHelperTypes[helperType] && os.IsNotExist(err) {
+				continue
+			}
 			return err
 		}
 		updatedHelperPath := helperBundle.Path()
@@ -259,6 +263,13 @@ var crHelperTypes = []CrBundleType{
 	CrBundleHelperGPU,
 	CrBundleHelperPlugin,
 	CrBundleHelperRenderer,
+}
+
+// crOptionalHelperTypes lists helper types that may be absent from the bundle.
+// CrBundleHelperPlugin is kept for backward compatibility with older Chromium
+// builds but is no longer present in current ones.
+var crOptionalHelperTypes = map[CrBundleType]bool{
+	CrBundleHelperPlugin: true,
 }
 
 var crHelperTypeNames = []string{

@@ -21,12 +21,17 @@
 package core
 
 import (
+	"bytes"
+	"encoding/xml"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/TeamDev-IP/Chromium-Branding/pkg/base"
 	"github.com/TeamDev-IP/Chromium-Branding/pkg/common"
 )
 
@@ -35,12 +40,14 @@ func SignAppBinaries(outDir string, params common.BrandingParams) (bool, error) 
 	if runtime.GOOS == "linux" {
 		return false, nil
 	}
+	if runtime.GOOS == "darwin" {
+		return signMacAppBinaries(outDir, params)
+	}
 
 	filesToSign, err := getFilesToSign(outDir, params)
 	if err != nil {
 		return false, err
 	}
-
 	return SignBinaries(params, filesToSign, "application")
 }
 
@@ -69,6 +76,162 @@ func SignBinaries(params common.BrandingParams, binaries []string, binariesGroup
 	}
 
 	return true, nil
+}
+
+func signMacAppBinaries(outDir string, params common.BrandingParams) (bool, error) {
+	signTool, err := GetSignTool(params)
+	if err != nil {
+		return false, nil
+	}
+
+	mst, ok := signTool.(MacSignTool)
+	if !ok {
+		return false, errors.New("macOS sign tool does not support entitlements-aware signing")
+	}
+
+	if base.GetValue(params.Mac.CodesignIdentity) == "" {
+		return false, nil
+	}
+
+	helperEntitlements, tempFile, err := prepareForSigning(outDir, params)
+	if err != nil {
+		return false, err
+	}
+	if tempFile != "" {
+		defer os.Remove(tempFile)
+	}
+
+	bundleName := *params.Mac.Bundle.Name
+	bundlePath := filepath.Join(outDir, bundleName+".app")
+
+	filesToSign, err := getFilesToSignMac(outDir, bundleName)
+	if err != nil {
+		return false, err
+	}
+
+	for _, path := range filesToSign {
+		if path == bundlePath {
+			continue
+		}
+		if err := mst.SignBinaryWithEntitlements(path, helperEntitlements); err != nil {
+			return false, unableToSign(err)
+		}
+	}
+
+	if err := signTool.SignBinary(bundlePath); err != nil {
+		return false, unableToSign(err)
+	}
+
+	return true, nil
+}
+
+// prepareForSigning copies the provisioning profile and builds a filtered
+// helper entitlements file when keychain-access-groups is present.
+// Returns the helper entitlements path and the temp file path (empty if no
+// temp file was created). The caller must remove the temp file when done.
+func prepareForSigning(outDir string, params common.BrandingParams) (helperEntitlements, tempFile string, err error) {
+	entitlementsPath := params.Mac.CodesignEntitlements
+
+	hasKAG, err := hasKeychainAccessGroups(entitlementsPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	bundleName := *params.Mac.Bundle.Name
+	profileDest := filepath.Join(outDir, bundleName+".app", "Contents", "embedded.provisionprofile")
+
+	// Always remove any pre-existing profile. It would be bound to TeamDev's
+	// Team ID and cause AMFI to reject the re-signed bundle.
+	if err := os.Remove(profileDest); err != nil && !os.IsNotExist(err) {
+		return "", "", fmt.Errorf("removing existing provisioning profile: %w", err)
+	}
+
+	if !hasKAG {
+		return entitlementsPath, "", nil
+	}
+
+	profilePath := params.Mac.ProvisioningProfile
+	if profilePath == "" {
+		return "", "", errors.New("entitlements contain keychain-access-groups but no provisioning profile is configured; set mac.provisioningProfile in params.json")
+	}
+	if _, statErr := os.Stat(profilePath); statErr != nil {
+		if os.IsNotExist(statErr) {
+			return "", "", fmt.Errorf("provisioning profile not found: %s", profilePath)
+		}
+		return "", "", fmt.Errorf("checking provisioning profile %s: %w", profilePath, statErr)
+	}
+
+	if err := base.CopyFile(profilePath, profileDest); err != nil {
+		return "", "", fmt.Errorf("copying provisioning profile: %w", err)
+	}
+
+	tempPath, err := writeHelperEntitlements(entitlementsPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	return tempPath, tempPath, nil
+}
+
+// hasKeychainAccessGroups reports whether the plist at entitlementsPath
+// contains a keychain-access-groups key.
+func hasKeychainAccessGroups(entitlementsPath string) (bool, error) {
+	data, err := os.ReadFile(entitlementsPath)
+	if err != nil {
+		return false, fmt.Errorf("reading entitlements %s: %w", entitlementsPath, err)
+	}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	inKey := false
+	for {
+		tok, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return false, fmt.Errorf("parsing entitlements: %w", err)
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			if t.Name.Local == "key" {
+				inKey = true
+			}
+		case xml.EndElement:
+			inKey = false
+		case xml.CharData:
+			if inKey && strings.TrimSpace(string(t)) == "keychain-access-groups" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// writeHelperEntitlements writes a copy of the plist at entitlementsPath
+// with the keychain-access-groups key/value pair removed to a temp file.
+// Returns the temp file path; the caller is responsible for removing it.
+func writeHelperEntitlements(entitlementsPath string) (string, error) {
+	data, err := os.ReadFile(entitlementsPath)
+	if err != nil {
+		return "", fmt.Errorf("reading entitlements: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp("", "helper-entitlements-*.plist")
+	if err != nil {
+		return "", fmt.Errorf("creating temp entitlements: %w", err)
+	}
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("writing temp entitlements: %w", err)
+	}
+	tmpFile.Close()
+
+	if err := base.ExecCommand("plutil", []string{"-remove", "keychain-access-groups", tmpFile.Name()}); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("removing keychain-access-groups from entitlements: %w", err)
+	}
+
+	return tmpFile.Name(), nil
 }
 
 func unableToSign(internalError error) error {

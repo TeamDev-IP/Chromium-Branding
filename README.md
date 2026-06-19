@@ -82,6 +82,7 @@ Here's the description of the JSON parameters:
 | `mac.icnsPath`             | The path to the `.icns` file that represents the macOS app icon.                                                                                            |
 | `mac.codesignIdentity`     | The identity that will be used to sign the macOS app bundle.                                                                                                |
 | `mac.codesignEntitlements` | The path to the entitlements file that will be used to sign the macOS app bundle.                                                                           |
+| `mac.provisioningProfile`  | Optional. The path to an Apple-signed `.provisionprofile` file. Required when the entitlements file contains `keychain-access-groups` (e.g. for Touch ID).  |
 | `mac.teamID`               | The team ID that will be used to sign the macOS app bundle.                                                                                                 |
 | `mac.appleID`              | The Apple ID that will be used to notarize the macOS app bundle.                                                                                            |
 | `mac.password`             | The password for the Apple ID that will be used to notarize the macOS app bundle.                                                                           |
@@ -115,3 +116,44 @@ If you want to deploy the customized Chromium binaries with your software, you n
 The `win.signCommand` parameter in the `params.json` file allows you to sign the Windows executable.
 
 The `mac.codesignIdentity`, `mac.codesignEntitlements`, `mac.teamID`, `mac.appleID`, and `mac.password` parameters in the `params.json` file allow you to sign and notarize the macOS app bundle.
+
+### Enabling Touch ID on macOS
+
+To support the macOS Touch ID WebAuthn platform authenticator:
+
+**1. Add the keychain access group entitlement**
+
+In your `assets/entitlements.plist`, add:
+
+```xml
+<key>keychain-access-groups</key>
+<array>
+  <string><TeamID>.<BundleID>.webauthn</string>
+</array>
+```
+
+Replace `<TeamID>` with your Apple Developer Team ID and `<BundleID>` with the `mac.bundle.id` value from your `params.json`.
+
+**2. Obtain a provisioning profile**
+
+1. Log in to [developer.apple.com](https://developer.apple.com).
+2. Under **Identifiers**, register an App ID for your `mac.bundle.id`.
+3. Under **Profiles**, create a **Developer ID** distribution profile for that identifier and download the `.provisionprofile` file.
+
+**3. Configure the tool**
+
+In `params.json`, set:
+
+```json
+"mac": {
+  "provisioningProfile": "path/to/your.provisionprofile"
+}
+```
+
+The tool will automatically:
+- Copy the profile into `<AppName>.app/Contents/embedded.provisionprofile` before signing.
+- Strip `keychain-access-groups` from the entitlements used for helper bundles and dylibs (required to prevent AMFI from killing them).
+
+If `keychain-access-groups` is present in your entitlements but `provisioningProfile` is not configured, the tool will exit with an error before any signing is attempted.
+
+> Provisioning profiles expire. If the profile has expired, signing will fail. Renew it on the developer portal and download the new `.provisionprofile` file before re-signing.
