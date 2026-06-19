@@ -145,8 +145,11 @@ func prepareForSigning(outDir string, params common.BrandingParams) (helperEntit
 	if profilePath == "" {
 		return "", "", errors.New("entitlements contain keychain-access-groups but no provisioning profile is configured; set mac.provisioningProfile in params.json")
 	}
-	if _, statErr := os.Stat(profilePath); os.IsNotExist(statErr) {
-		return "", "", fmt.Errorf("provisioning profile not found: %s", profilePath)
+	if _, statErr := os.Stat(profilePath); statErr != nil {
+		if os.IsNotExist(statErr) {
+			return "", "", fmt.Errorf("provisioning profile not found: %s", profilePath)
+		}
+		return "", "", fmt.Errorf("checking provisioning profile %s: %w", profilePath, statErr)
 	}
 
 	bundleName := *params.Mac.Bundle.Name
