@@ -75,9 +75,38 @@ func FetchRcedit() (*Rcedit, error) {
 
 // SetIcon uses rcedit to replace the icon resource of the
 // specified chromiumBinaryPath with the file at iconPath.
+//
+// The icon is sorted largest-to-smallest before being applied.
+// See https://github.com/TeamDev-IP/Chromium-Branding/issues/25.
 func (rcedit *Rcedit) SetIcon(chromiumBinary UnsignedBinary, icon base.File) error {
 	fmt.Println("Setting icon for " + chromiumBinary.AbsPath().String())
-	return base.ExecCommand(rcedit.toolPath, []string{chromiumBinary.AbsPath().String(), setIconFlag, icon.AbsPath().String()})
+
+	data, err := os.ReadFile(icon.AbsPath().String())
+	if err != nil {
+		return err
+	}
+
+	sorted, err := sortICO(data, true)
+	if err != nil {
+		return err
+	}
+
+	tmpFile, err := os.CreateTemp("", "sorted-icon-*.ico")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := tmpFile.Write(sorted); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+
+	return base.ExecCommand(rcedit.toolPath, []string{chromiumBinary.AbsPath().String(), setIconFlag, tmpPath})
 }
 
 // SetVersion uses rcedit to set both the file version and
