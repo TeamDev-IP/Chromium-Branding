@@ -41,7 +41,7 @@ Take [params.json](params.json) and modify it with the necessary branding inform
   "win": {
     "executableName": "myapp",
     "processDisplayName": "My App",
-    "legalCopyright": "© 2025 MyCompany",
+    "legalCopyright": "© 2026 MyCompany",
     "author": "Me",
     "productName": "MyApp",
     "icoPath": "assets/app.ico",
